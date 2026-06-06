@@ -1,20 +1,15 @@
 """
-Application Settings
-====================
-Centralized configuration using pydantic-settings.
-Values are read from environment variables (or .env file).
+core/config.py
+==============
+Centralized application settings via pydantic-settings.
+All values can be overridden by environment variables or the .env file.
 """
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """
-    All application settings.
-    Override any field by setting the corresponding environment variable.
-    """
-
     # --- Application ---
     APP_NAME: str = "VendorBridge ERP"
     APP_ENV: str = "development"
@@ -29,6 +24,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # --- Email (SMTP) ---
     SMTP_HOST: str = ""
@@ -46,12 +42,7 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """
-    Returns a cached Settings instance.
-    Use as a FastAPI dependency: settings = Depends(get_settings)
-    """
     return Settings()
 
 
-# Module-level singleton for convenience
 settings = get_settings()

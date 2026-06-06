@@ -10,7 +10,12 @@ Usage (inside Docker):
 """
 
 import asyncio
+import os
+import sys
 from logging.config import fileConfig
+
+# Add the project root to sys.path to resolve 'app' module
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -21,9 +26,9 @@ from alembic import context
 # ---------------------------------------------------------------------------
 # Import the declarative Base so Alembic can detect model changes
 # ---------------------------------------------------------------------------
-# TODO: Uncomment this once models are implemented
-# from app.core.database import Base
-# from app.models import *  # noqa: F401 — ensures all models are registered
+# Import the declarative Base so Alembic can detect model changes
+from app.models.base import Base
+from app.models import *  # noqa: F401 — ensures all models are registered
 
 # ---------------------------------------------------------------------------
 # Alembic Config
@@ -35,8 +40,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set target metadata for autogenerate support
-# TODO: Replace None with Base.metadata once models are in place
-target_metadata = None  # Base.metadata
+target_metadata = Base.metadata
 
 # ---------------------------------------------------------------------------
 # Offline Migrations (without a live DB connection)

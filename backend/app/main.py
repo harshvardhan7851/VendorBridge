@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
     auth,
     vendors,
+    vendor_categories,
     rfqs,
     quotations,
     approvals,
@@ -61,6 +62,7 @@ app.add_middleware(
 API_PREFIX = "/api/v1"
 
 app.include_router(auth.router,           prefix=f"{API_PREFIX}/auth",           tags=["Authentication"])
+app.include_router(vendor_categories.router, prefix=f"{API_PREFIX}/vendor-categories", tags=["Vendor Categories"])
 app.include_router(vendors.router,        prefix=f"{API_PREFIX}/vendors",        tags=["Vendors"])
 app.include_router(rfqs.router,           prefix=f"{API_PREFIX}/rfqs",           tags=["RFQs"])
 app.include_router(quotations.router,     prefix=f"{API_PREFIX}/quotations",     tags=["Quotations"])

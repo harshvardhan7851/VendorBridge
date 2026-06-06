@@ -1,53 +1,73 @@
 """
-User Schemas
-============
-Pydantic v2 schemas for User model.
-  - UserCreate   : Request body for user registration
-  - UserUpdate   : Request body for updating a user
-  - UserResponse : Response model returned to clients
+schemas/user.py
+===============
+Pydantic v2 schemas for User management endpoints.
 """
 
-from uuid import UUID
-from typing import Optional
+import uuid
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
+from app.models.user import UserRole
 
+
+# ---------------------------------------------------------------------------
+# Create
+# ---------------------------------------------------------------------------
 
 class UserCreate(BaseModel):
-    """Schema for creating a new user."""
     email: EmailStr
+    password: str = Field(..., min_length=8)
     full_name: str = Field(..., min_length=2, max_length=255)
-    password: str = Field(..., min_length=8, description="Plain text password — will be hashed")
-    role: str = Field(default="vendor", description="One of: admin, procurement_officer, vendor, manager")
+    role: UserRole = UserRole.VENDOR
+    phone: str | None = Field(default=None, max_length=20)
+    vendor_company_id: uuid.UUID | None = None
 
-    model_config = {"json_schema_extra": {"example": {
-        "email": "john.doe@example.com",
-        "full_name": "John Doe",
-        "password": "SecurePass123!",
-        "role": "procurement_officer",
-    }}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "email": "officer@vendorbridge.com",
+                "password": "Pass@1234",
+                "full_name": "Ravi Sharma",
+                "role": "procurement_officer",
+            }
+        }
+    }
 
+
+# ---------------------------------------------------------------------------
+# Update
+# ---------------------------------------------------------------------------
 
 class UserUpdate(BaseModel):
-    """Schema for partially updating a user. All fields optional."""
-    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    role: Optional[str] = None
-    is_active: Optional[bool] = None
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
+    phone: str | None = Field(default=None, max_length=20)
+    role: UserRole | None = None
+    vendor_company_id: uuid.UUID | None = None
 
+
+# ---------------------------------------------------------------------------
+# Status patch
+# ---------------------------------------------------------------------------
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
+
+
+# ---------------------------------------------------------------------------
+# Response
+# ---------------------------------------------------------------------------
 
 class UserResponse(BaseModel):
-    """Schema returned in API responses. Excludes sensitive fields."""
-    id: UUID
+    id: uuid.UUID
     email: EmailStr
     full_name: str
-    role: str
+    role: UserRole
+    phone: str | None
     is_active: bool
     is_verified: bool
+    vendor_company_id: uuid.UUID | None
+    last_login: datetime | None
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class TokenResponse(BaseModel):
-    """Schema for JWT authentication responses."""
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
