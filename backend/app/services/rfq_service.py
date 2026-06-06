@@ -39,11 +39,7 @@ from app.schemas.rfq import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _generate_rfq_number() -> str:
-    """Generate a unique RFQ number: RFQ-YYYYMMDD-XXXX (4 random hex chars)."""
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    suffix = uuid.uuid4().hex[:4].upper()
-    return f"RFQ-{today}-{suffix}"
+from app.utils.reference_generator import generate_rfq_number
 
 
 def _require_draft(rfq: RFQ) -> None:
@@ -103,7 +99,7 @@ class RFQService:
         created_by_id: uuid.UUID,
     ) -> RFQ:
         rfq = RFQ(
-            rfq_number=_generate_rfq_number(),
+            rfq_number=generate_rfq_number(),
             title=payload.title,
             description=payload.description,
             deadline=payload.deadline,

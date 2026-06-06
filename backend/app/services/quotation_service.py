@@ -21,11 +21,7 @@ from app.models.approval import ApprovalTrigger
 from app.schemas.quotation import QuotationCreate, QuotationUpdate
 
 
-def _generate_quotation_number() -> str:
-    """Generate a unique quotation number: QT-YYYYMMDD-XXXX (4 random hex chars)."""
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    suffix = uuid.uuid4().hex[:4].upper()
-    return f"QT-{today}-{suffix}"
+from app.utils.reference_generator import generate_quotation_number
 
 
 class QuotationService:
@@ -97,7 +93,7 @@ class QuotationService:
             )
 
         quotation = Quotation(
-            quotation_number=_generate_quotation_number(),
+            quotation_number=generate_quotation_number(),
             rfq_id=payload.rfq_id,
             vendor_id=current_user.vendor_company_id,
             status=QuotationStatus.DRAFT,
