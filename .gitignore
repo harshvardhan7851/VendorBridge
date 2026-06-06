@@ -1,0 +1,79 @@
+# =============================================================================
+# VendorBridge ERP - .gitignore
+# =============================================================================
+
+# ---- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# ---- Node / Frontend ---------------------------------------------------------
+node_modules/
+dist/
+.cache/
+.parcel-cache/
+
+# ---- Environment Files -------------------------------------------------------
+.env
+.env.local
+.env.*.local
+# Keep .env.example files (they are committed as templates)
+!.env.example
+
+# ---- Docker ------------------------------------------------------------------
+# Do not ignore docker-compose.override.yml if it exists
+# docker-compose.override.yml
+
+# ---- IDEs / Editors ----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Logs --------------------------------------------------------------------
+*.log
+logs/
+
+# ---- Alembic -----------------------------------------------------------------
+# Keep alembic/versions/ tracked — migration files should be version controlled
+
+# ---- Miscellaneous -----------------------------------------------------------
+*.bak
+*.tmp

@@ -1,0 +1,13 @@
+# Alembic Versions Directory
+#
+# This directory contains auto-generated database migration files.
+# All migration files in this folder MUST be committed to version control.
+#
+# Generate a new migration:
+#   docker compose exec backend alembic revision --autogenerate -m "description"
+#
+# Apply migrations:
+#   docker compose exec backend alembic upgrade head
+#
+# View migration history:
+#   docker compose exec backend alembic history

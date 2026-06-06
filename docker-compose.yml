@@ -1,0 +1,107 @@
+version: "3.9"
+
+# =============================================================================
+# VendorBridge ERP - Docker Compose
+# Production-ready skeleton for Procurement & Vendor Management ERP
+#
+# Services:
+#   1. postgres  - PostgreSQL 16 database
+#   2. backend   - FastAPI Python 3.11 application
+#   3. frontend  - React 18 + Vite + TypeScript application
+#
+# Usage:
+#   docker compose up --build        # Start all services (build images)
+#   docker compose up -d             # Start in detached mode
+#   docker compose down              # Stop all services
+#   docker compose logs -f backend   # Tail logs for a specific service
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: vendorbridge_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vendorbridge
+      POSTGRES_USER: vendorbridge
+      POSTGRES_PASSWORD: vendorbridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vendorbridge -d vendorbridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vendorbridge_net
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vendorbridge_backend
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload during development
+      - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vendorbridge:vendorbridge@postgres:5432/vendorbridge
+      SECRET_KEY: dev-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vendorbridge_net
+
+  # ---------------------------------------------------------------------------
+  # React + Vite Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vendorbridge_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for Vite hot reload during development
+      - ./frontend:/app
+      # Prevent host node_modules from overriding container's
+      - /app/node_modules
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - vendorbridge_net
+
+# =============================================================================
+# Named Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    name: vendorbridge_postgres_data
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  vendorbridge_net:
+    name: vendorbridge_network
+    driver: bridge
