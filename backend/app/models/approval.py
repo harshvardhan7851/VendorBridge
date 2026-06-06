@@ -1,63 +1,34 @@
 """
-ApprovalRequest Model
-======================
-Tracks approval/rejection workflow for RFQs and Purchase Orders.
-
-Future Relationships:
-  - ApprovalRequest belongs to an RFQ (optional, rfq_id FK)
-  - ApprovalRequest belongs to a PurchaseOrder (optional, po_id FK)
-  - ApprovalRequest belongs to an approver User (approver_id FK)
-  - ApprovalRequest belongs to a requester User (requester_id FK)
+ApprovalTrigger Model
+=====================
+Tracks when a quotation is selected as the winner. Module 3 will consume these
+to orchestrate multi-step approval workflows before PO generation.
 """
 
 import uuid
-from sqlalchemy import Column, String, Text, ForeignKey
-from sqlalchemy import Enum as SAEnum
+from decimal import Decimal
+from sqlalchemy import DECIMAL, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.models.base import Base, TimestampMixin
 
-
-class ApprovalRequest(Base):
-    __tablename__ = "approval_requests"
-
-    # --- Primary Key ---
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    # --- Reference Number ---
-    approval_number = Column(String(50), unique=True, nullable=False)  # e.g., APR-2024-001
-
-    # --- Approval Type ---
-    approval_type = Column(
-        SAEnum("rfq", "purchase_order", "vendor_registration", name="approval_type"),
-        nullable=False,
-    )
-
-    # --- Status ---
-    status = Column(
-        SAEnum("pending", "approved", "rejected", "escalated", name="approval_status"),
-        nullable=False,
-        default="pending",
-    )
-
-    # --- Comments ---
-    requester_notes = Column(Text, nullable=True)
-    approver_comments = Column(Text, nullable=True)
+class ApprovalTrigger(TimestampMixin, Base):
+    __tablename__ = "approval_triggers"
 
     # --- Foreign Keys ---
-    # TODO: rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id"), nullable=True)
-    # TODO: purchase_order_id = Column(UUID(as_uuid=True), ForeignKey("purchase_orders.id"), nullable=True)
-    # TODO: requester_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    # TODO: approver_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    rfq_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    quotation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("quotations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    vendor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
-    # --- Timestamps ---
-    # TODO: Add created_at, responded_at
-
-    # --- Future Relationships ---
-    # TODO: rfq = relationship("RFQ", back_populates="approval")
-    # TODO: purchase_order = relationship("PurchaseOrder", back_populates="approval")
-    # TODO: requester = relationship("User", foreign_keys=[requester_id])
-    # TODO: approver = relationship("User", foreign_keys=[approver_id])
+    # --- Financial ---
+    amount: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<ApprovalRequest id={self.id} type={self.approval_type} status={self.status}>"
+        return f"<ApprovalTrigger id={self.id} rfq={self.rfq_id} quotation={self.quotation_id} amount={self.amount}>"

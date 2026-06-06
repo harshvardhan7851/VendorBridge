@@ -35,6 +35,9 @@ from app.models.quotation import (  # noqa: F401
 # --- Module 2: Notification ---
 from app.models.notification import Notification, NotificationType  # noqa: F401
 
+# --- Module 3: Approval ---
+from app.models.approval import ApprovalTrigger  # noqa: F401
+
 __all__ = [
     # Base
     "Base",
@@ -59,4 +62,6 @@ __all__ = [
     # Module 2 — Notification
     "Notification",
     "NotificationType",
+    # Module 3 - Approval
+    "ApprovalTrigger",
 ]
