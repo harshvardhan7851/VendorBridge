@@ -1,31 +1,22 @@
 """
-Notification Schemas — Pydantic v2 placeholders.
+schemas/notification.py
+=======================
+Pydantic v2 schemas for Notifications.
 """
+
 from uuid import UUID
-from typing import Optional
+from datetime import datetime
 from pydantic import BaseModel
-
-
-class NotificationCreate(BaseModel):
-    user_id: UUID
-    title: str
-    message: str
-    notification_type: str = "general"
-    related_entity_type: Optional[str] = None
-    related_entity_id: Optional[UUID] = None
-
-
-class NotificationUpdate(BaseModel):
-    is_read: Optional[bool] = None
-
+from app.models.notification import NotificationType
 
 class NotificationResponse(BaseModel):
     id: UUID
-    title: str
+    user_id: UUID
+    type: NotificationType
     message: str
-    notification_type: str
     is_read: bool
-    related_entity_type: Optional[str] = None
-    related_entity_id: Optional[UUID] = None
+    entity_type: str | None = None
+    entity_id: UUID | None = None
+    created_at: datetime
 
     model_config = {"from_attributes": True}

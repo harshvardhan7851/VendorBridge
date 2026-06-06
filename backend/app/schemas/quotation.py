@@ -1,60 +1,85 @@
 """
-Quotation Schemas
-=================
+schemas/quotation.py
+====================
 Pydantic v2 schemas for Quotation and QuotationLineItem models.
 """
 
-from uuid import UUID
-from typing import Optional, List
-from datetime import date
+import uuid
+from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
+from app.models.quotation import QuotationStatus
+
+
+# ===========================================================================
+# QuotationLineItem
+# ===========================================================================
 
 class QuotationLineItemCreate(BaseModel):
-    item_number: int
-    description: str
-    quantity: float = Field(..., gt=0)
-    unit: Optional[str] = None
-    unit_price: Decimal = Field(..., gt=0)
+    rfq_line_item_id: uuid.UUID
+    unit_price: Decimal = Field(..., ge=0, description="Unit price for the item")
+    quantity: Decimal = Field(..., gt=0, description="Quantity offered")
+    notes: str | None = None
 
+class QuotationLineItemUpdate(BaseModel):
+    unit_price: Decimal | None = Field(default=None, ge=0)
+    quantity: Decimal | None = Field(default=None, gt=0)
+    notes: str | None = None
 
 class QuotationLineItemResponse(BaseModel):
-    id: UUID
-    item_number: int
-    description: str
-    quantity: float
-    unit: Optional[str] = None
+    id: uuid.UUID
+    quotation_id: uuid.UUID
+    rfq_line_item_id: uuid.UUID | None
     unit_price: Decimal
-    total_price: Optional[Decimal] = None
+    quantity: Decimal
+    total_price: Decimal | None
+    notes: str | None
+    created_at: datetime
+    
+    # Extra field for comparison engine
+    is_lowest_price: bool | None = None
 
     model_config = {"from_attributes": True}
 
 
-class QuotationCreate(BaseModel):
-    rfq_id: UUID
-    valid_until: Optional[date] = None
-    currency: str = "USD"
-    notes: Optional[str] = None
-    line_items: List[QuotationLineItemCreate] = Field(default_factory=list)
+# ===========================================================================
+# Quotation
+# ===========================================================================
 
+class QuotationCreate(BaseModel):
+    rfq_id: uuid.UUID
+    validity_date: date | None = None
+    delivery_days: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+    line_items: list[QuotationLineItemCreate] = Field(..., min_length=1)
 
 class QuotationUpdate(BaseModel):
-    valid_until: Optional[date] = None
-    notes: Optional[str] = None
-    status: Optional[str] = None
-
+    validity_date: date | None = None
+    delivery_days: int | None = Field(default=None, ge=0)
+    notes: str | None = None
 
 class QuotationResponse(BaseModel):
-    id: UUID
+    id: uuid.UUID
     quotation_number: str
-    status: str
-    subtotal: Optional[Decimal] = None
-    tax_amount: Optional[Decimal] = None
-    total_amount: Optional[Decimal] = None
-    currency: str
-    valid_until: Optional[date] = None
-    notes: Optional[str] = None
-    line_items: List[QuotationLineItemResponse] = []
+    rfq_id: uuid.UUID
+    vendor_id: uuid.UUID
+    status: QuotationStatus
+    validity_date: date | None
+    delivery_days: int | None
+    notes: str | None
+    total_amount: Decimal | None
+    submitted_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+class QuotationDetail(QuotationResponse):
+    line_items: list[QuotationLineItemResponse] = []
+    
+    # Extra field for comparison engine
+    is_lowest_total: bool | None = None
+    vendor_name: str | None = None
 
     model_config = {"from_attributes": True}
