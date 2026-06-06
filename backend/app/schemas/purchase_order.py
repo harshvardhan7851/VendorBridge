@@ -1,59 +1,39 @@
 """
-Purchase Order Schemas — Pydantic v2 placeholders.
+schemas/purchase_order.py
 """
-from uuid import UUID
-from typing import Optional, List
-from datetime import date
+from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
-from pydantic import BaseModel, Field
-
-
-class POLineItemCreate(BaseModel):
-    item_number: int
-    description: str
-    quantity: float = Field(..., gt=0)
-    unit: Optional[str] = None
-    unit_price: Decimal = Field(..., gt=0)
-
+import uuid
+from datetime import datetime, date
+from app.enums.module3 import POStatus
 
 class POLineItemResponse(BaseModel):
-    id: UUID
-    item_number: int
-    description: str
-    quantity: float
+    id: uuid.UUID
+    product_name: str
+    description: str | None
+    quantity: Decimal
     unit_price: Decimal
-    total_price: Optional[Decimal] = None
-    quantity_received: Optional[float] = None
+    total_price: Decimal
+    model_config = ConfigDict(from_attributes=True)
 
-    model_config = {"from_attributes": True}
+class POStatusUpdate(BaseModel):
+    status: POStatus
 
-
-class PurchaseOrderCreate(BaseModel):
-    vendor_id: UUID
-    quotation_id: Optional[UUID] = None
-    order_date: Optional[date] = None
-    expected_delivery_date: Optional[date] = None
-    delivery_address: Optional[str] = None
-    currency: str = "USD"
-    notes: Optional[str] = None
-    line_items: List[POLineItemCreate] = Field(default_factory=list)
-
-
-class PurchaseOrderUpdate(BaseModel):
-    status: Optional[str] = None
-    expected_delivery_date: Optional[date] = None
-    actual_delivery_date: Optional[date] = None
-    notes: Optional[str] = None
-
-
-class PurchaseOrderResponse(BaseModel):
-    id: UUID
+class POResponse(BaseModel):
+    id: uuid.UUID
     po_number: str
+    approval_request_id: uuid.UUID
+    vendor_id: uuid.UUID
+    rfq_id: uuid.UUID
+    quotation_id: uuid.UUID
+    subtotal: Decimal
+    cgst: Decimal
+    sgst: Decimal
+    igst: Decimal
+    grand_total: Decimal
     status: str
-    total_amount: Optional[Decimal] = None
-    currency: str
-    order_date: Optional[date] = None
-    expected_delivery_date: Optional[date] = None
-    line_items: List[POLineItemResponse] = []
-
-    model_config = {"from_attributes": True}
+    issued_date: date | None
+    created_by: uuid.UUID | None
+    created_at: datetime
+    line_items: list[POLineItemResponse] = []
+    model_config = ConfigDict(from_attributes=True)

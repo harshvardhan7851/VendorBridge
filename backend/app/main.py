@@ -26,6 +26,7 @@ from app.routers import (
     notifications,
     reports,
     comparison,
+    activity_logs,
 )
 
 # ---------------------------------------------------------------------------
@@ -71,6 +72,7 @@ app.include_router(approvals.router,      prefix=f"{API_PREFIX}/approvals",     
 app.include_router(purchase_orders.router,prefix=f"{API_PREFIX}/purchase-orders",tags=["Purchase Orders"])
 app.include_router(invoices.router,       prefix=f"{API_PREFIX}/invoices",       tags=["Invoices"])
 app.include_router(notifications.router,  prefix=f"{API_PREFIX}/notifications",  tags=["Notifications"])
+app.include_router(activity_logs.router,  prefix=f"{API_PREFIX}/activity-logs",  tags=["Activity Logs"])
 app.include_router(reports.router,        prefix=f"{API_PREFIX}/reports",        tags=["Reports"])
 app.include_router(comparison.router,     prefix=f"{API_PREFIX}/comparison",     tags=["Comparison Engine"])
 

@@ -1,32 +1,32 @@
 """
-ActivityLog Model
-=================
-Audit trail for all significant actions performed in the system.
+models/activity_log.py
+======================
+Activity Log model for auditing.
 """
 
 import uuid
-from sqlalchemy import Column, String, Text, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from datetime import datetime
 
-from app.core.database import Base
+from sqlalchemy import ForeignKey, String, DateTime, func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
+from app.models.base import Base
 
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    # TODO: user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-
-    action = Column(String(100), nullable=False)       # e.g., "rfq.created", "vendor.approved"
-    entity_type = Column(String(50), nullable=True)    # e.g., "rfq", "vendor"
-    entity_id = Column(UUID(as_uuid=True), nullable=True)
-
-    description = Column(Text, nullable=True)
-    metadata_ = Column("metadata", JSON, nullable=True)  # Extra context (IP, browser, etc.)
-
-    # TODO: user = relationship("User", back_populates="activity_logs")
-    # TODO: Add created_at timestamp
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    action: Mapped[str] = mapped_column(String(255), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    
+    old_values: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    new_values: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<ActivityLog id={self.id} action={self.action}>"
+        return f"<ActivityLog action={self.action} entity={self.entity_type}:{self.entity_id}>"

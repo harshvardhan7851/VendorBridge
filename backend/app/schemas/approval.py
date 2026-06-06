@@ -1,29 +1,40 @@
 """
-Approval Schemas — Pydantic v2 placeholders.
+schemas/approval.py
 """
-from uuid import UUID
-from typing import Optional
-from pydantic import BaseModel
-
+from pydantic import BaseModel, ConfigDict
+from decimal import Decimal
+import uuid
+from datetime import datetime
+from app.enums.module3 import ApprovalStatus
 
 class ApprovalCreate(BaseModel):
-    approval_type: str
-    rfq_id: Optional[UUID] = None
-    purchase_order_id: Optional[UUID] = None
-    requester_notes: Optional[str] = None
+    rfq_id: uuid.UUID
+    quotation_id: uuid.UUID
+    vendor_id: uuid.UUID
+    amount: Decimal
 
+class ApprovalDecisionRequest(BaseModel):
+    remarks: str
 
-class ApprovalUpdate(BaseModel):
-    status: Optional[str] = None
-    approver_comments: Optional[str] = None
-
+class ApprovalHistoryResponse(BaseModel):
+    id: uuid.UUID
+    action: str
+    performed_by: uuid.UUID
+    remarks: str | None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
 class ApprovalResponse(BaseModel):
-    id: UUID
-    approval_number: str
-    approval_type: str
+    id: uuid.UUID
+    rfq_id: uuid.UUID
+    quotation_id: uuid.UUID
+    vendor_id: uuid.UUID
+    requested_by: uuid.UUID
+    approved_by: uuid.UUID | None
+    amount: Decimal
     status: str
-    requester_notes: Optional[str] = None
-    approver_comments: Optional[str] = None
-
-    model_config = {"from_attributes": True}
+    remarks: str | None
+    requested_at: datetime
+    decision_at: datetime | None
+    history: list[ApprovalHistoryResponse] = []
+    model_config = ConfigDict(from_attributes=True)

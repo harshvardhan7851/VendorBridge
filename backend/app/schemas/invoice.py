@@ -1,39 +1,35 @@
 """
-Invoice Schemas — Pydantic v2 placeholders.
+schemas/invoice.py
 """
-from uuid import UUID
-from typing import Optional
-from datetime import date
+from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
-from pydantic import BaseModel
+import uuid
+from datetime import datetime, date
+from app.enums.module3 import InvoiceStatus
 
+class InvoiceLineItemResponse(BaseModel):
+    id: uuid.UUID
+    description: str
+    quantity: Decimal
+    unit_price: Decimal
+    total_price: Decimal
+    model_config = ConfigDict(from_attributes=True)
 
-class InvoiceCreate(BaseModel):
-    purchase_order_id: UUID
-    invoice_number: str
-    invoice_date: date
-    due_date: Optional[date] = None
-    total_amount: Decimal
-    currency: str = "USD"
-    description: Optional[str] = None
-
-
-class InvoiceUpdate(BaseModel):
-    status: Optional[str] = None
-    payment_date: Optional[date] = None
-    amount_paid: Optional[Decimal] = None
-    rejection_reason: Optional[str] = None
-
+class InvoiceStatusUpdate(BaseModel):
+    status: InvoiceStatus
 
 class InvoiceResponse(BaseModel):
-    id: UUID
+    id: uuid.UUID
     invoice_number: str
-    status: str
-    total_amount: Decimal
-    amount_paid: Optional[Decimal] = None
-    currency: str
+    purchase_order_id: uuid.UUID
+    vendor_id: uuid.UUID
     invoice_date: date
-    due_date: Optional[date] = None
-    payment_date: Optional[date] = None
-
-    model_config = {"from_attributes": True}
+    subtotal: Decimal
+    tax_amount: Decimal
+    grand_total: Decimal
+    status: str
+    pdf_url: str | None
+    email_sent: bool
+    created_at: datetime
+    line_items: list[InvoiceLineItemResponse] = []
+    model_config = ConfigDict(from_attributes=True)

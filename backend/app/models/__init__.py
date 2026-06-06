@@ -36,7 +36,10 @@ from app.models.quotation import (  # noqa: F401
 from app.models.notification import Notification, NotificationType  # noqa: F401
 
 # --- Module 3: Approval ---
-from app.models.approval import ApprovalTrigger  # noqa: F401
+from app.models.approval import ApprovalTrigger, ApprovalRequest, ApprovalHistory  # noqa: F401
+from app.models.purchase_order import PurchaseOrder, POLineItem  # noqa: F401
+from app.models.invoice import Invoice, InvoiceLineItem  # noqa: F401
+from app.models.activity_log import ActivityLog  # noqa: F401
 
 __all__ = [
     # Base
@@ -62,6 +65,13 @@ __all__ = [
     # Module 2 — Notification
     "Notification",
     "NotificationType",
-    # Module 3 - Approval
+    # Module 3
     "ApprovalTrigger",
+    "ApprovalRequest",
+    "ApprovalHistory",
+    "PurchaseOrder",
+    "POLineItem",
+    "Invoice",
+    "InvoiceLineItem",
+    "ActivityLog",
 ]

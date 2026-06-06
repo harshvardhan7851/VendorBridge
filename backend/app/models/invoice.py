@@ -1,52 +1,55 @@
 """
-Invoice Model
-=============
-Represents a vendor invoice submitted against a Purchase Order.
+models/invoice.py
+=================
+Invoice models for Module 3.
 """
 
 import uuid
-from sqlalchemy import Column, String, Text, Numeric, Date
-from sqlalchemy import Enum as SAEnum
+from datetime import date, datetime
+from decimal import Decimal
+
+from sqlalchemy import DECIMAL, ForeignKey, String, Date, Text, Boolean, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.models.base import Base, TimestampMixin
 
 
-class Invoice(Base):
+class Invoice(TimestampMixin, Base):
     __tablename__ = "invoices"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    invoice_number = Column(String(50), unique=True, nullable=False)
-    internal_reference = Column(String(50), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    invoice_number: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    
+    purchase_order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    vendor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    # TODO: purchase_order_id = Column(UUID(as_uuid=True), ForeignKey("purchase_orders.id"))
-    # TODO: vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id"))
+    invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
+    
+    subtotal: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    grand_total: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="DRAFT", index=True)
+    
+    pdf_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    email_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    subtotal = Column(Numeric(14, 2), nullable=True)
-    tax_amount = Column(Numeric(14, 2), nullable=True)
-    total_amount = Column(Numeric(14, 2), nullable=False)
-    currency = Column(String(10), nullable=False, default="USD")
-    amount_paid = Column(Numeric(14, 2), nullable=True, default=0)
+    line_items: Mapped[list["InvoiceLineItem"]] = relationship("InvoiceLineItem", back_populates="invoice", cascade="all, delete-orphan")
 
-    invoice_date = Column(Date, nullable=False)
-    due_date = Column(Date, nullable=True)
-    payment_date = Column(Date, nullable=True)
 
-    status = Column(
-        SAEnum(
-            "received", "under_review", "approved", "rejected",
-            "payment_pending", "paid", "partially_paid",
-            name="invoice_status",
-        ),
-        nullable=False,
-        default="received",
-    )
+class InvoiceLineItem(Base):
+    __tablename__ = "invoice_line_items"
 
-    description = Column(Text, nullable=True)
-    rejection_reason = Column(Text, nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    quantity: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    total_price: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    # TODO: purchase_order = relationship("PurchaseOrder", back_populates="invoices")
-    # TODO: vendor = relationship("Vendor", back_populates="invoices")
-
-    def __repr__(self) -> str:
-        return f"<Invoice id={self.id} number={self.invoice_number} status={self.status}>"
+    invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="line_items")
