@@ -1,93 +1,189 @@
 """
-Quotation Models
-================
-Quotation: A vendor's response to an RFQ.
-QuotationLineItem: Individual line items in a quotation.
+models/quotation.py
+===================
+Quotation and QuotationLineItem ORM models.
 
-Future Relationships:
-  - Quotation belongs to an RFQ (rfq_id FK)
-  - Quotation belongs to a Vendor (vendor_id FK)
-  - Quotation has many QuotationLineItems
-  - Quotation can generate a PurchaseOrder (one-to-one, if awarded)
+Tables:
+  - quotations            : A vendor's priced response to an RFQ.
+  - quotation_line_items  : Per-line-item pricing within a quotation.
 """
 
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Numeric, Date, ForeignKey
-from sqlalchemy import Enum as SAEnum
+import enum
+from datetime import date, datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    DateTime,
+    Date,
+    DECIMAL,
+    Enum as SAEnum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.models.base import Base, TimestampMixin
 
 
-class Quotation(Base):
+# ---------------------------------------------------------------------------
+# Enum: QuotationStatus
+# ---------------------------------------------------------------------------
+
+class QuotationStatus(str, enum.Enum):
+    DRAFT     = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    WITHDRAWN = "WITHDRAWN"
+    SELECTED  = "SELECTED"
+    REJECTED  = "REJECTED"
+
+
+# ---------------------------------------------------------------------------
+# Model: Quotation
+# ---------------------------------------------------------------------------
+
+class Quotation(TimestampMixin, Base):
+    """
+    A vendor's formal price response to an RFQ.
+
+    Lifecycle: DRAFT → SUBMITTED → SELECTED / REJECTED / WITHDRAWN
+    """
+
     __tablename__ = "quotations"
 
-    # --- Primary Key ---
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
     # --- Reference Number ---
-    quotation_number = Column(String(50), unique=True, nullable=False)  # e.g., QUO-2024-001
-
-    # --- Foreign Keys ---
-    # TODO: rfq_id = Column(UUID(as_uuid=True), ForeignKey("rfqs.id"), nullable=False)
-    # TODO: vendor_id = Column(UUID(as_uuid=True), ForeignKey("vendors.id"), nullable=False)
-
-    # --- Financial Summary ---
-    subtotal = Column(Numeric(14, 2), nullable=True)
-    tax_amount = Column(Numeric(14, 2), nullable=True)
-    total_amount = Column(Numeric(14, 2), nullable=True)
-    currency = Column(String(10), nullable=False, default="USD")
-
-    # --- Validity ---
-    valid_until = Column(Date, nullable=True)
-
-    # --- Status ---
-    status = Column(
-        SAEnum(
-            "draft", "submitted", "under_review", "awarded", "rejected",
-            name="quotation_status",
-        ),
-        nullable=False,
-        default="draft",
+    quotation_number: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
     )
 
-    # --- Additional ---
-    notes = Column(Text, nullable=True)
+    # --- Foreign Keys ---
+    rfq_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("rfqs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
-    # --- Timestamps ---
-    # TODO: Add created_at, submitted_at, updated_at
+    vendor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vendors.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
-    # --- Future Relationships ---
-    # TODO: rfq = relationship("RFQ", back_populates="quotations")
-    # TODO: vendor = relationship("Vendor", back_populates="quotations")
-    # TODO: line_items = relationship("QuotationLineItem", back_populates="quotation", cascade="all, delete-orphan")
-    # TODO: purchase_order = relationship("PurchaseOrder", back_populates="quotation", uselist=False)
+    # --- Status ---
+    status: Mapped[QuotationStatus] = mapped_column(
+        SAEnum(QuotationStatus, name="quotationstatus", create_type=True),
+        nullable=False,
+        default=QuotationStatus.DRAFT,
+        index=True,
+    )
+
+    # --- Validity & Delivery ---
+    validity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    delivery_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # --- Notes & Financials ---
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    total_amount: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(18, 2), nullable=True
+    )
+
+    # --- Submission Timestamp ---
+    submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # --- Relationships ---
+    rfq: Mapped["RFQ"] = relationship(  # type: ignore[name-defined]
+        "RFQ",
+        back_populates="quotations",
+        lazy="select",
+    )
+
+    vendor: Mapped["Vendor"] = relationship(  # type: ignore[name-defined]
+        "Vendor",
+        foreign_keys=[vendor_id],
+        lazy="select",
+    )
+
+    line_items: Mapped[list["QuotationLineItem"]] = relationship(
+        "QuotationLineItem",
+        back_populates="quotation",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
 
     def __repr__(self) -> str:
         return f"<Quotation id={self.id} number={self.quotation_number} status={self.status}>"
 
 
+# ---------------------------------------------------------------------------
+# Model: QuotationLineItem
+# ---------------------------------------------------------------------------
+
 class QuotationLineItem(Base):
+    """
+    Vendor's priced response to a single RFQLineItem.
+    Stores unit price, quantity, and computed total.
+    """
+
     __tablename__ = "quotation_line_items"
 
     # --- Primary Key ---
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+    )
 
     # --- Foreign Keys ---
-    # TODO: quotation_id = Column(UUID(as_uuid=True), ForeignKey("quotations.id"), nullable=False)
-    # TODO: rfq_line_item_id = Column(UUID(as_uuid=True), ForeignKey("rfq_line_items.id"), nullable=True)
+    quotation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quotations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
-    # --- Item Details ---
-    item_number = Column(Integer, nullable=False)
-    description = Column(Text, nullable=False)
-    quantity = Column(Numeric(10, 2), nullable=False)
-    unit = Column(String(50), nullable=True)
-    unit_price = Column(Numeric(12, 2), nullable=False)
-    total_price = Column(Numeric(14, 2), nullable=True)   # Computed: quantity * unit_price
+    rfq_line_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("rfq_line_items.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
-    # --- Future Relationships ---
-    # TODO: quotation = relationship("Quotation", back_populates="line_items")
-    # TODO: rfq_line_item = relationship("RFQLineItem", back_populates="quotation_line_items")
+    # --- Pricing ---
+    unit_price: Mapped[Decimal] = mapped_column(DECIMAL(18, 2), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(DECIMAL(12, 2), nullable=False)
+    total_price: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(18, 2), nullable=True
+    )  # Denormalised: quantity * unit_price
+
+    # --- Notes ---
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # --- Timestamps ---
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    # --- Relationships ---
+    quotation: Mapped["Quotation"] = relationship(
+        "Quotation", back_populates="line_items"
+    )
+
+    rfq_line_item: Mapped["RFQLineItem"] = relationship(  # type: ignore[name-defined]
+        "RFQLineItem",
+        back_populates="quotation_line_items",
+        lazy="select",
+    )
 
     def __repr__(self) -> str:
-        return f"<QuotationLineItem id={self.id} item_no={self.item_number}>"
+        return f"<QuotationLineItem id={self.id} quotation={self.quotation_id} price={self.total_price}>"

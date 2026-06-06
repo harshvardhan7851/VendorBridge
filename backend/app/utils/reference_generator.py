@@ -5,48 +5,22 @@ Utility for generating sequential reference numbers for
 RFQs, Quotations, Purchase Orders, and Invoices.
 """
 
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 
+def _generate_reference(prefix: str) -> str:
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    suffix = uuid.uuid4().hex[:4].upper()
+    return f"{prefix}-{today}-{suffix}"
 
-def generate_rfq_number(sequence: int) -> str:
-    """
-    Generate a formatted RFQ reference number.
-    Example: RFQ-2024-0001
+def generate_rfq_number() -> str:
+    return _generate_reference("RFQ")
 
-    TODO: Implement with DB sequence or atomic counter.
-    """
-    year = datetime.utcnow().year
-    return f"RFQ-{year}-{sequence:04d}"
+def generate_quotation_number() -> str:
+    return _generate_reference("QT")
 
+def generate_po_number() -> str:
+    return _generate_reference("PO")
 
-def generate_quotation_number(sequence: int) -> str:
-    """
-    Generate a formatted Quotation reference number.
-    Example: QUO-2024-0001
-
-    TODO: Implement with DB sequence or atomic counter.
-    """
-    year = datetime.utcnow().year
-    return f"QUO-{year}-{sequence:04d}"
-
-
-def generate_po_number(sequence: int) -> str:
-    """
-    Generate a formatted Purchase Order number.
-    Example: PO-2024-0001
-
-    TODO: Implement with DB sequence or atomic counter.
-    """
-    year = datetime.utcnow().year
-    return f"PO-{year}-{sequence:04d}"
-
-
-def generate_invoice_internal_reference(sequence: int) -> str:
-    """
-    Generate an internal invoice reference number.
-    Example: INV-2024-0001
-
-    TODO: Implement with DB sequence or atomic counter.
-    """
-    year = datetime.utcnow().year
-    return f"INV-{year}-{sequence:04d}"
+def generate_invoice_internal_reference() -> str:
+    return _generate_reference("INV")

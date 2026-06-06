@@ -25,6 +25,7 @@ from app.routers import (
     invoices,
     notifications,
     reports,
+    comparison,
 )
 
 # ---------------------------------------------------------------------------
@@ -71,6 +72,7 @@ app.include_router(purchase_orders.router,prefix=f"{API_PREFIX}/purchase-orders"
 app.include_router(invoices.router,       prefix=f"{API_PREFIX}/invoices",       tags=["Invoices"])
 app.include_router(notifications.router,  prefix=f"{API_PREFIX}/notifications",  tags=["Notifications"])
 app.include_router(reports.router,        prefix=f"{API_PREFIX}/reports",        tags=["Reports"])
+app.include_router(comparison.router,     prefix=f"{API_PREFIX}/comparison",     tags=["Comparison Engine"])
 
 # ---------------------------------------------------------------------------
 # Lifecycle Events
