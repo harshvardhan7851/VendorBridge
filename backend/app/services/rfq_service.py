@@ -354,9 +354,13 @@ class RFQService:
         rfq.updated_by = updated_by_id
         await self.db.commit()
 
-        # Return full assignment list
-        refreshed = await self._get_rfq(rfq_id)
-        return refreshed.vendor_assignments
+        # Query assignments directly (avoids stale selectinload cache)
+        result = await self.db.execute(
+            select(RFQVendorAssignment)
+            .where(RFQVendorAssignment.rfq_id == rfq_id)
+            .order_by(RFQVendorAssignment.created_at)
+        )
+        return list(result.scalars().all())
 
     async def list_assigned_vendors(
         self, rfq_id: uuid.UUID
