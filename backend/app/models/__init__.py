@@ -1,32 +1,20 @@
 """
-Models Package
-==============
-All SQLAlchemy ORM model classes are defined in this package.
-Import them here so Alembic can discover them during autogenerate.
+models/__init__.py
+==================
+Register all models so Alembic autogenerate picks them up.
+Import order matters: Base models before models with FKs.
 """
 
-# TODO: Uncomment imports as models are implemented:
-# from app.models.user import User
-# from app.models.vendor import Vendor
-# from app.models.rfq import RFQ, RFQLineItem
-# from app.models.quotation import Quotation, QuotationLineItem
-# from app.models.approval import ApprovalRequest
-# from app.models.purchase_order import PurchaseOrder, POLineItem
-# from app.models.invoice import Invoice
-# from app.models.notification import Notification
-# from app.models.activity_log import ActivityLog
+from app.models.base import Base  # noqa: F401
+from app.models.vendor import VendorCategory, Vendor, VendorStatus  # noqa: F401
+from app.models.user import User, UserSession, UserRole  # noqa: F401
 
 __all__ = [
-    # "User",
-    # "Vendor",
-    # "RFQ",
-    # "RFQLineItem",
-    # "Quotation",
-    # "QuotationLineItem",
-    # "ApprovalRequest",
-    # "PurchaseOrder",
-    # "POLineItem",
-    # "Invoice",
-    # "Notification",
-    # "ActivityLog",
+    "Base",
+    "VendorCategory",
+    "Vendor",
+    "VendorStatus",
+    "User",
+    "UserSession",
+    "UserRole",
 ]

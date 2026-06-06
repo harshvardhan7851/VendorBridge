@@ -1,51 +1,113 @@
 """
-Auth Middleware
-===============
-Middleware placeholder for JWT authentication.
-Verifies Bearer tokens on protected routes.
+middlewares/auth.py
+===================
+FastAPI dependencies for authentication and role-based access control.
+
+Provides:
+  - get_current_user()     : Validates JWT, returns active User object.
+  - require_roles(*roles)  : Role guard dependency factory.
 """
 
-from fastapi import Request, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import uuid
 
-security_scheme = HTTPBearer(auto_error=False)
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
+from app.models.user import User, UserRole
+from app.utils.security import decode_token
+
+_bearer_scheme = HTTPBearer(auto_error=True)
 
 
-class AuthMiddleware:
+# ---------------------------------------------------------------------------
+# get_current_user
+# ---------------------------------------------------------------------------
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
     """
-    Starlette middleware stub for JWT authentication.
+    Validates the Bearer JWT in the Authorization header.
+    Returns the corresponding User from the database.
 
-    TODO:
-      1. Extract Authorization header from request
-      2. Validate "Bearer <token>" format
-      3. Decode JWT using security.decode_access_token()
-      4. Attach decoded user payload to request.state.user
-      5. Call next(request) to proceed
-      6. Raise 401 if token is missing or invalid on protected paths
+    Raises:
+        401 — token missing, invalid, or expired.
+        401 — user not found or deactivated.
     """
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        # TODO: Implement middleware logic
-        await self.app(scope, receive, send)
-
-
-async def get_current_user_dependency(
-    credentials: HTTPAuthorizationCredentials = None,
-):
-    """
-    FastAPI dependency for extracting the current user from JWT.
-
-    TODO:
-      1. Check credentials are present (raise 401 if not)
-      2. Decode JWT token
-      3. Fetch user from DB by subject claim
-      4. Return User object
-    """
-    # TODO: Implement
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Authentication not implemented yet",
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+
+    try:
+        payload = decode_token(credentials.credentials)
+        token_type: str = payload.get("type", "")
+        if token_type != "access":
+            raise credentials_exception
+
+        user_id_str: str | None = payload.get("sub")
+        if not user_id_str:
+            raise credentials_exception
+
+        user_id = uuid.UUID(user_id_str)
+    except (JWTError, ValueError):
+        raise credentials_exception
+
+    # Fetch user from DB
+    result = await db.execute(select(User).where(User.id == user_id))
+    user: User | None = result.scalar_one_or_none()
+
+    if user is None:
+        raise credentials_exception
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated",
+        )
+
+    return user
+
+
+# ---------------------------------------------------------------------------
+# require_roles
+# ---------------------------------------------------------------------------
+
+def require_roles(*roles: UserRole):
+    """
+    Dependency factory that enforces role-based access control.
+
+    Usage:
+        @router.get(
+            "/admin-only",
+            dependencies=[Depends(require_roles(UserRole.ADMIN))]
+        )
+        async def admin_only():
+            ...
+
+    Or inject the user too:
+        async def endpoint(
+            current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.MANAGER))
+        ):
+    """
+
+    async def _check_role(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Access denied. Required role(s): "
+                    f"{', '.join(r.value for r in roles)}."
+                ),
+            )
+        return current_user
+
+    return _check_role
